@@ -332,6 +332,69 @@ async def get_product(
     return ProductResponse(**product_data)
 
 
+@app.get("/products", tags=["products"])
+async def list_products(
+    category: Optional[str] = Query(None, description="Filtrar por categoría"),
+    limit: int = Query(10, ge=1, le=100, description="Límite de resultados"),
+    skip: int = Query(0, ge=0, description="Registros a saltar"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Lista todos los productos de la base de datos
+    
+    Soporta paginación y filtro por categoría
+    """
+    from crud import get_all_products
+    from sqlalchemy import select
+    
+    try:
+        # Si hay filtro de categoría
+        if category:
+            result = await db.execute(
+                select(Product)
+                .where(Product.category.ilike(f"%{category}%"))
+                .offset(skip)
+                .limit(limit)
+            )
+            products = result.scalars().all()
+        else:
+            # Sin filtro, obtener todos
+            products = await get_all_products(db, skip=skip, limit=limit)
+        
+        # Convertir a lista de diccionarios
+        products_list = []
+        for p in products:
+            products_list.append({
+                "id": p.id,
+                "external_id": p.external_id,
+                "name": p.name,
+                "brand": p.brand,
+                "category": p.category,
+                "country": p.country,
+                "currency": p.currency,
+                "current_price": p.current_price,
+                "original_price": p.original_price,
+                "discount_percentage": p.discount_percentage,
+                "is_tracked": p.is_tracked,
+                "image_url": p.image_url,
+                "product_url": p.product_url
+            })
+        
+        return {
+            "products": products_list,
+            "count": len(products_list),
+            "skip": skip,
+            "limit": limit
+        }
+        
+    except Exception as e:
+        logger.error(f"Error listando productos: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error obteniendo productos: {str(e)}"
+        )
+
+
 @app.get("/search", tags=["search"])
 async def search_products(
     q: str = Query(..., description="Término de búsqueda"),
