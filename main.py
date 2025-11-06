@@ -15,11 +15,22 @@ import logging.config
 # Importaciones locales
 from config import settings, LOGGING_CONFIG
 from cache import cache, make_price_key, make_search_key
-from database import get_db, init_db, close_db, check_db_connection
+from database import get_db, init_db, close_db, check_db_connection, User
 from database import Product as DBProduct, PriceHistory
 from scraper import scraper, get_product_price, search_amazon_products, RainforestAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from fastapi.security import OAuth2PasswordRequestForm
+from auth import (
+    UserCreate,
+    UserResponse,
+    Token,
+    register_user,
+    authenticate_user,
+    create_access_token,
+    get_current_active_user
+)
+from datetime import timedelta
 
 # Configurar logging
 logging.config.dictConfig(LOGGING_CONFIG)
@@ -156,6 +167,112 @@ async def rainforest_exception_handler(request, exc: RainforestAPIError):
 
 
 # ========== ENDPOINTS ==========
+
+# ========== AUTH ENDPOINTS ==========
+
+@app.post("/auth/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED, tags=["auth"])
+async def register(
+    user_data: UserCreate,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Registra un nuevo usuario
+    
+    - **email**: Email único del usuario
+    - **password**: Password (será hasheado)
+    - **full_name**: Nombre completo (opcional)
+    - **username**: Username (opcional)
+    """
+    try:
+        user = await register_user(db, user_data)
+        logger.info(f"✅ Usuario registrado: {user.email}")
+        return user
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(f"Error en registro: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al registrar usuario: {str(e)}"
+        )
+
+
+@app.post("/auth/login", response_model=Token, tags=["auth"])
+async def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Login de usuario
+    
+    Retorna un token JWT para autenticación
+    
+    - **username**: Email del usuario (OAuth2 lo llama username)
+    - **password**: Password del usuario
+    """
+    # OAuth2PasswordRequestForm usa 'username' pero nosotros usamos email
+    user = await authenticate_user(db, form_data.username, form_data.password)
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Email o password incorrectos",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Crear token JWT
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.email},
+        expires_delta=access_token_expires
+    )
+    
+    # Actualizar last_login
+    user.last_login = datetime.now()
+    await db.commit()
+    
+    logger.info(f"✅ Login exitoso: {user.email}")
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "expires_in": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60  # en segundos
+    }
+
+
+@app.get("/auth/me", response_model=UserResponse, tags=["auth"])
+async def get_me(current_user: User = Depends(get_current_active_user)):
+    """
+    Obtiene información del usuario actual
+    
+    Requiere autenticación (token JWT en header)
+    """
+    return current_user
+
+
+@app.post("/auth/refresh", response_model=Token, tags=["auth"])
+async def refresh_token(current_user: User = Depends(get_current_active_user)):
+    """
+    Refresca el token de autenticación
+    
+    Genera un nuevo token JWT con tiempo de expiración renovado
+    """
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": current_user.email},
+        expires_delta=access_token_expires
+    )
+    
+    logger.info(f"🔄 Token refrescado: {current_user.email}")
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "expires_in": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    }
+
+
+# ========== ENDPOINTS EXISTENTES (debajo) ==========
 
 @app.get("/", tags=["info"])
 async def root():
@@ -483,6 +600,7 @@ async def get_price_history(
 @app.post("/track", response_model=TrackResponse, tags=["tracking"])
 async def track_product(
     request: TrackRequest,
+    current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -533,6 +651,15 @@ async def track_product(
         # Actualizar producto existente
         product.is_tracked = True
         product.tracking_count = (product.tracking_count or 0) + 1
+
+    # Asociar producto al usuario actual
+    from crud import track_product_for_user
+    tracked = await track_product_for_user(
+        db,
+        user_id=current_user.id,
+        product_id=product.id,
+        alert_price=request.alert_price
+    )
     
     await db.commit()
     await db.refresh(product)
