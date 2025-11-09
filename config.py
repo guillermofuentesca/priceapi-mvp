@@ -3,6 +3,7 @@ Configuración central de la aplicación
 Gestiona todas las variables de entorno y configuraciones
 """
 from pydantic_settings import BaseSettings
+from pydantic import Field
 from functools import lru_cache
 from typing import Optional
 
