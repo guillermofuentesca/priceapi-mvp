@@ -3,7 +3,7 @@ HYBRID90-PRICEAPI-FEB25-V1
 API de comparación de precios - Día 3
 Integración con Rainforest API, Redis y PostgreSQL
 """
-from fastapi import FastAPI, Query, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, Query, status, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from typing import List, Optional
@@ -15,7 +15,17 @@ import logging.config
 # Importaciones locales
 from config import settings, LOGGING_CONFIG
 from cache import cache, make_price_key, make_search_key
-from database import get_db, init_db, close_db, check_db_connection, User
+from database import (
+    get_db, 
+    init_db, 
+    close_db, 
+    check_db_connection,
+    User,
+    Product,
+    PriceHistory,
+    APIKey as DBAPIKey,
+    APIUsage
+)
 from database import Product as DBProduct, PriceHistory
 from scraper import scraper, get_product_price, search_amazon_products, RainforestAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -271,6 +281,147 @@ async def refresh_token(current_user: User = Depends(get_current_active_user)):
         "expires_in": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
     }
 
+# ========== API KEYS ENDPOINTS ==========
+
+from database import APIKey as DBAPIKey, APIUsage
+from crud import (
+    create_api_key,
+    get_user_api_keys,
+    delete_api_key,
+    get_api_key_by_key,
+    check_rate_limit,
+    log_api_usage
+)
+
+
+class APIKeyCreate(BaseModel):
+    """Schema para crear API key"""
+    name: str = Field(..., description="Nombre descriptivo de la API key")
+    tier: str = Field("free", description="Tier: free, starter, pro, business, enterprise")
+
+
+class APIKeyResponse(BaseModel):
+    """Schema para respuesta de API key"""
+    id: int
+    name: str
+    key: str
+    tier: str
+    requests_per_month: int
+    requests_used: int
+    is_active: bool
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+@app.post("/api-keys", response_model=APIKeyResponse, tags=["api-keys"])
+async def create_new_api_key(
+    key_data: APIKeyCreate,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Crea una nueva API key para el usuario actual
+    
+    Tiers disponibles:
+    - **free**: 1,000 requests/mes
+    - **starter**: 10,000 requests/mes ($49/mes)
+    - **pro**: 100,000 requests/mes ($199/mes)
+    - **business**: 500,000 requests/mes ($799/mes)
+    - **enterprise**: Unlimited ($2,999+/mes)
+    """
+    api_key = await create_api_key(
+        db,
+        user_id=current_user.id,
+        name=key_data.name,
+        tier=key_data.tier
+    )
+    await db.commit()
+    
+    logger.info(f"🔑 API key creada: {api_key.name} ({api_key.tier}) - User: {current_user.email}")
+    
+    return api_key
+
+
+@app.get("/api-keys", response_model=List[APIKeyResponse], tags=["api-keys"])
+async def list_api_keys(
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Lista todas las API keys del usuario actual"""
+    keys = await get_user_api_keys(db, current_user.id)
+    return keys
+
+
+@app.delete("/api-keys/{key_id}", tags=["api-keys"])
+async def delete_user_api_key(
+    key_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Elimina una API key del usuario actual"""
+    deleted = await delete_api_key(db, key_id, current_user.id)
+    
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="API key no encontrada"
+        )
+    
+    return {"success": True, "message": "API key eliminada"}
+
+
+# Dependency para validar API key en headers
+async def get_api_key(
+    x_api_key: str = Header(..., description="API Key"),
+    db: AsyncSession = Depends(get_db)
+) -> DBAPIKey:
+    """
+    Valida API key desde header X-API-Key
+    
+    Uso en endpoints protegidos por API key
+    """
+    api_key = await get_api_key_by_key(db, x_api_key)
+    
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="API key inválida"
+        )
+    
+    # Verificar rate limit
+    allowed, remaining = await check_rate_limit(db, api_key)
+    
+    if not allowed:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Límite de requests excedido para tier {api_key.tier}"
+        )
+    
+    return api_key
+
+
+@app.get("/api-keys/usage/stats", tags=["api-keys"])
+async def get_api_key_usage_stats(
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Obtiene estadísticas de uso de las API keys del usuario"""
+    keys = await get_user_api_keys(db, current_user.id)
+    
+    stats = []
+    for key in keys:
+        stats.append({
+            "name": key.name,
+            "tier": key.tier,
+            "requests_used": key.requests_used,
+            "requests_limit": key.requests_per_month,
+            "usage_percentage": round((key.requests_used / key.requests_per_month) * 100, 2),
+            "remaining": key.requests_per_month - key.requests_used
+        })
+    
+    return {"api_keys": stats}
 
 # ========== ENDPOINTS EXISTENTES (debajo) ==========
 
@@ -314,6 +465,7 @@ async def get_price(
     asin: str = Query(..., description="Amazon ASIN del producto"),
     country: str = Query("US", description="Código país (US, MX, etc)"),
     force_refresh: bool = Query(False, description="Forzar actualización sin caché"),
+    api_key: DBAPIKey = Depends(get_api_key),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -323,6 +475,15 @@ async def get_price(
     - Si no está en caché o force_refresh=True, hace scraping
     - Guarda en base de datos y caché
     """
+    await log_api_usage(
+        db,
+        api_key_id=api_key.id,
+        endpoint="/price",
+        method="GET",
+        status_code=200
+    )
+    await db.commit()
+
     # Generar clave de caché
     cache_key = make_price_key(asin, country)
     

@@ -189,6 +189,54 @@ class PriceAlert(Base):
     
     def __repr__(self):
         return f"<PriceAlert {self.alert_type} user={self.user_id}>"
+    
+class APIKey(Base):
+    """API Keys para developers"""
+    __tablename__ = "api_keys"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    
+    # API Key
+    key = Column(String(64), unique=True, index=True, nullable=False)
+    name = Column(String(100), nullable=False)  # Nombre descriptivo
+    
+    # Plan y límites
+    tier = Column(String(20), default="free")  # free, starter, pro, business, enterprise
+    requests_per_month = Column(Integer, default=1000)
+    requests_used = Column(Integer, default=0)
+    
+    # Estado
+    is_active = Column(Boolean, default=True)
+    last_used_at = Column(DateTime(timezone=True), nullable=True)
+    
+    # Metadata
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    expires_at = Column(DateTime(timezone=True), nullable=True)
+    
+    def __repr__(self):
+        return f"<APIKey {self.name} - {self.tier}>"
+
+
+class APIUsage(Base):
+    """Log de uso de API keys"""
+    __tablename__ = "api_usage"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    api_key_id = Column(Integer, ForeignKey("api_keys.id"), nullable=False, index=True)
+    
+    # Request info
+    endpoint = Column(String(200), nullable=False)
+    method = Column(String(10), nullable=False)
+    status_code = Column(Integer, nullable=False)
+    
+    # Metadata
+    ip_address = Column(String(50), nullable=True)
+    user_agent = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    
+    def __repr__(self):
+        return f"<APIUsage {self.method} {self.endpoint}>"
 
 
 # ========== FUNCIONES DE INICIALIZACIÓN ==========

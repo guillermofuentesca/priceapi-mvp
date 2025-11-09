@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
 from typing import List, Optional
 from datetime import datetime
+import secrets 
 
 from database import Product, PriceHistory, User, TrackedProduct, PriceAlert
 
@@ -306,3 +307,146 @@ async def get_stats(db: AsyncSession) -> dict:
         "total_users": users_count,
         "price_records": history_count
     }
+
+# ========== API KEYS CRUD ==========
+
+import secrets
+from database import APIKey, APIUsage
+
+
+async def generate_api_key() -> str:
+    """Genera una API key única y segura"""
+    return f"hybrid90_{secrets.token_urlsafe(32)}"
+
+
+async def create_api_key(
+    db: AsyncSession,
+    user_id: int,
+    name: str,
+    tier: str = "free"
+) -> APIKey:
+    """
+    Crea una nueva API key para un usuario
+    
+    Tiers disponibles:
+    - free: 1,000 req/mes
+    - starter: 10,000 req/mes
+    - pro: 100,000 req/mes
+    - business: 500,000 req/mes
+    - enterprise: unlimited
+    """
+    # Límites por tier
+    tier_limits = {
+        "free": 1000,
+        "starter": 10000,
+        "pro": 100000,
+        "business": 500000,
+        "enterprise": 999999999  # "unlimited"
+    }
+    
+    # Generar key única
+    key = await generate_api_key()
+    
+    api_key = APIKey(
+        user_id=user_id,
+        key=key,
+        name=name,
+        tier=tier,
+        requests_per_month=tier_limits.get(tier, 1000),
+        is_active=True
+    )
+    
+    db.add(api_key)
+    await db.flush()
+    await db.refresh(api_key)
+    return api_key
+
+
+async def get_api_key_by_key(db: AsyncSession, key: str) -> Optional[APIKey]:
+    """Obtiene una API key por su valor"""
+    result = await db.execute(
+        select(APIKey).where(APIKey.key == key, APIKey.is_active == True)
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_user_api_keys(db: AsyncSession, user_id: int) -> List[APIKey]:
+    """Obtiene todas las API keys de un usuario"""
+    result = await db.execute(
+        select(APIKey)
+        .where(APIKey.user_id == user_id)
+        .order_by(APIKey.created_at.desc())
+    )
+    return result.scalars().all()
+
+
+async def delete_api_key(db: AsyncSession, key_id: int, user_id: int) -> bool:
+    """Elimina una API key (solo si pertenece al usuario)"""
+    result = await db.execute(
+        delete(APIKey).where(
+            APIKey.id == key_id,
+            APIKey.user_id == user_id
+        )
+    )
+    await db.commit()
+    return result.rowcount > 0
+
+
+async def log_api_usage(
+    db: AsyncSession,
+    api_key_id: int,
+    endpoint: str,
+    method: str,
+    status_code: int,
+    ip_address: Optional[str] = None,
+    user_agent: Optional[str] = None
+) -> APIUsage:
+    """Registra el uso de una API key"""
+    usage = APIUsage(
+        api_key_id=api_key_id,
+        endpoint=endpoint,
+        method=method,
+        status_code=status_code,
+        ip_address=ip_address,
+        user_agent=user_agent
+    )
+    db.add(usage)
+    
+    # Incrementar contador de uso
+    await db.execute(
+        update(APIKey)
+        .where(APIKey.id == api_key_id)
+        .values(
+            requests_used=APIKey.requests_used + 1,
+            last_used_at=datetime.now()
+        )
+    )
+    
+    await db.flush()
+    return usage
+
+
+async def check_rate_limit(db: AsyncSession, api_key: APIKey) -> tuple[bool, int]:
+    """
+    Verifica si una API key ha excedido su límite
+    
+    Returns:
+        (permitido, requests_restantes)
+    """
+    remaining = api_key.requests_per_month - api_key.requests_used
+    
+    if api_key.requests_used >= api_key.requests_per_month:
+        return False, 0
+    
+    return True, remaining
+
+
+async def reset_monthly_usage(db: AsyncSession):
+    """
+    Resetea el contador de uso mensual de todas las API keys
+    (Ejecutar con cron job el primer día de cada mes)
+    """
+    await db.execute(
+        update(APIKey).values(requests_used=0)
+    )
+    await db.commit()
