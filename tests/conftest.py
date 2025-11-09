@@ -14,7 +14,7 @@ from config import settings
 
 # URL de base de datos de prueba (usa base de datos separada)
 # Convertir URL a async (postgresql+asyncpg://)
-TEST_DATABASE_URL = settings.DATABASE_URL.replace("pricetracker_db", "pricetracker_test_db")
+TEST_DATABASE_URL = settings.async_database_url.replace("pricetracker_db", "pricetracker_test_db")
 if TEST_DATABASE_URL.startswith("postgresql://"):
     TEST_DATABASE_URL = TEST_DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 

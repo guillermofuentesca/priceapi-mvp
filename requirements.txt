@@ -1,67 +1,56 @@
-# ========================================
-# HYBRID90-PRICEAPI-FEB25-V1
-# Dependencias Python - Día 3
-# ========================================
-
-# ========== CORE FRAMEWORK ==========
+alembic==1.13.0
+annotated-types==0.7.0
+anyio==3.7.1
+argon2-cffi==25.1.0
+argon2-cffi-bindings==25.1.0
+async-timeout==5.0.1
+asyncpg==0.29.0
+bcrypt==5.0.0
+certifi==2025.10.5
+cffi==2.0.0
+click==8.3.0
+coverage==7.11.0
+cryptography==46.0.3
+dnspython==2.8.0
+ecdsa==0.19.1
+email-validator==2.1.0
+exceptiongroup==1.3.0
 fastapi==0.104.1
-uvicorn[standard]==0.24.0
+greenlet==3.2.4
+h11==0.16.0
+hiredis==3.3.0
+httpcore==1.0.9
+httptools==0.7.1
+httpx==0.25.1
+idna==3.11
+iniconfig==2.3.0
+Mako==1.3.10
+MarkupSafe==3.0.3
+packaging==25.0
+passlib==1.7.4
+pluggy==1.6.0
+pyasn1==0.6.1
+pycparser==2.23
 pydantic==2.5.0
-pydantic-settings==2.1.0  # Para gestión de configuración
-
-# ========== HTTP CLIENT ==========
-httpx==0.25.1  # Cliente HTTP asíncrono para Rainforest API
-
-# ========== DATABASE ==========
-sqlalchemy[asyncio]==2.0.23  # ORM con soporte asíncrono
-asyncpg==0.29.0  # Driver PostgreSQL asíncrono
-alembic==1.13.0  # Migraciones de base de datos
-
-# ========== CACHE ==========
-redis[hiredis]==5.0.1  # Cliente Redis con parser C optimizado
-
-# ========== CONFIGURACIÓN ==========
-python-dotenv==1.0.0  # Gestión de variables de entorno
-
-# ========== SEGURIDAD (Día 5) ==========
-python-jose[cryptography]==3.3.0  # JWT tokens
-passlib[bcrypt]==1.7.4  # Hash de passwords
-python-multipart==0.0.6  # Para form data
-
-# ========== VALIDACIÓN Y PARSING ==========
-email-validator==2.1.0  # Validación de emails
-
-# ========== TESTING (Día 6) ==========
+pydantic-settings==2.1.0
+pydantic_core==2.14.1
 pytest==7.4.3
 pytest-asyncio==0.21.1
 pytest-cov==4.1.0
-httpx==0.25.1  # Ya está arriba, se usa también para testing
-
-# ========== BACKGROUND TASKS (Día 8-9) ==========
-# celery[redis]==5.3.4  # Descomentar cuando llegues al Día 8
-# flower==2.0.1  # Monitor para Celery
-
-# ========== LOGGING Y MONITORING ==========
-# sentry-sdk[fastapi]==1.39.1  # Descomentar para producción
-
-# ========================================
-# INSTALACIÓN
-# ========================================
-# 
-# 1. Crear entorno virtual:
-#    python -m venv venv
-#    source venv/bin/activate  # Linux/Mac
-#    venv\Scripts\activate  # Windows
-#
-# 2. Instalar dependencias:
-#    pip install -r requirements.txt
-#
-# 3. Verificar instalación:
-#    pip list
-#
-# ========================================
-# VERSIONES RECOMENDADAS
-# ========================================
-# Python: 3.10+
-# PostgreSQL: 14+
-# Redis: 6+
+python-dotenv==1.0.0
+python-jose==3.3.0
+python-multipart==0.0.6
+PyYAML==6.0.3
+redis==5.0.1
+rsa==4.9.1
+six==1.17.0
+sniffio==1.3.1
+SQLAlchemy==2.0.23
+starlette==0.27.0
+tomli==2.3.0
+typing-inspection==0.4.2
+typing_extensions==4.15.0
+uvicorn==0.24.0
+uvloop==0.22.1
+watchfiles==1.1.1
+websockets==15.0.1

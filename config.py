@@ -23,7 +23,18 @@ class Settings(BaseSettings):
     
     # ========== DATABASE ==========
     # PostgreSQL
-    DATABASE_URL: str = "postgresql://user:password@localhost:5432/pricetracker"
+    DATABASE_URL: str = Field(
+        default="postgresql+asyncpg://pricetracker_user:pricetracker_pass@localhost:5432/pricetracker_db",
+        description="PostgreSQL connection string"
+        )
+
+    @property
+    def async_database_url(self) -> str:
+        """Convierte DATABASE_URL a formato asyncpg si es necesario"""
+        url = self.DATABASE_URL
+        if url.startswith("postgresql://"):
+            return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return url
     DB_POOL_SIZE: int = 10
     DB_MAX_OVERFLOW: int = 20
     DB_ECHO: bool = False  # Log SQL queries
