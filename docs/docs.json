@@ -4,7 +4,7 @@
     "dark": "/logo/dark.svg",
     "light": "/logo/light.svg"
   },
-  "favicon": "/favicon.png",
+  "favicon": "/favicon.svg",
   "colors": {
     "primary": "#0D9373",
     "light": "#07C983",
@@ -43,17 +43,7 @@
       "group": "API Documentation",
       "pages": [
         "api-reference/introduction",
-        "api-reference/endpoint/get-price",
-        "api-reference/endpoint/get-history",
-        "api-reference/endpoint/track-product"
-      ]
-    },
-    {
-      "group": "Guides",
-      "pages": [
-        "guides/first-app",
-        "guides/rate-limits",
-        "guides/best-practices"
+        "api-reference/endpoint/get-price"
       ]
     }
   ],
