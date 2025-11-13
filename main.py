@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from typing import List, Optional
 from datetime import datetime
+from affiliate import get_clean_url, get_tier_info
 from pydantic import BaseModel, Field
 from contextlib import asynccontextmanager
 import logging.config
@@ -297,7 +298,10 @@ from crud import (
 class APIKeyCreate(BaseModel):
     """Schema para crear API key"""
     name: str = Field(..., description="Nombre descriptivo de la API key")
-    tier: str = Field("free", description="Tier: free, starter, pro, business, enterprise")
+    tier: str = Field(
+        "free", 
+        description="Tier: free, starter, professional, business, enterprise"
+    )
 
 
 class APIKeyResponse(BaseModel):
@@ -377,18 +381,11 @@ async def get_api_key(
     x_api_key: str = Header(..., description="API Key"),
     db: AsyncSession = Depends(get_db)
 ) -> DBAPIKey:
-    """
-    Valida API key desde header X-API-Key
-    
-    Uso en endpoints protegidos por API key
-    """
+    """Valida API key desde header X-API-Key"""
     api_key = await get_api_key_by_key(db, x_api_key)
     
     if not api_key:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="API key inválida"
-        )
+        raise HTTPException(...)
     
     # Verificar rate limit
     allowed, remaining = await check_rate_limit(db, api_key)
@@ -422,6 +419,29 @@ async def get_api_key_usage_stats(
         })
     
     return {"api_keys": stats}
+
+# @app.patch("/api-keys/{key_id}/preferences", response_model=APIKeyResponse, tags=["api-keys"])
+# async def update_api_key_preferences(
+#     key_id: int,
+#     preference: str = Query(..., description="Preferencia: clean_url | hybrid90_url"),
+#     current_user: User = Depends(get_current_active_user),
+#     db: AsyncSession = Depends(get_db)
+# ):
+
+@app.get("/api-keys/tier-info/{tier}", tags=["api-keys"])
+async def get_tier_information(tier: str):
+    """
+    Obtiene información sobre un tier específico
+    
+    Incluye reglas de affiliate links y capacidades
+    """
+    from affiliate import get_tier_info
+    
+    info = get_tier_info(tier)
+    return {
+        "tier": tier,
+        **info
+    }
 
 # ========== ENDPOINTS EXISTENTES (debajo) ==========
 
@@ -483,6 +503,9 @@ async def get_price(
         status_code=200
     )
     await db.commit()
+
+    # Importar función de affiliate
+    logger.info(f"📊 Consultando precio: {asin} ({country})")
 
     # Generar clave de caché
     cache_key = make_price_key(asin, country)
@@ -565,10 +588,35 @@ async def get_price(
         # Guardar en caché
         await cache.set(cache_key, product_data, ttl=settings.CACHE_TTL_PRICE)
         
+        # Limpiar URL de tracking (todos los tiers reciben URLs limpias)
+        from affiliate import get_clean_url
+
+        original_url = product_data.get("url") or product_data.get("product_url") or ""
+        clean_url, url_metadata = get_clean_url(original_url, api_key.tier)
+    
+        logger.info(f"🔗 Affiliate logic applied: {url_metadata}")
+    
         return {
-            **product_data,
-            "source": "scraping",
-            "timestamp": datetime.now().isoformat()
+            "asin": asin,
+            "title": product_data.get("title"),
+            "price": product_data.get("price"),
+            "currency": product_data.get("currency"),
+            "availability": product_data.get("availability"),
+            "url": clean_url,  # ← URL limpia
+            "original_price": product_data.get("original_price"),
+            "discount": product_data.get("discount"),
+            "image": product_data.get("image"),
+            "rating": product_data.get("rating"),
+            "reviews_count": product_data.get("reviews_count"),
+            "in_stock": product_data.get("in_stock"),
+            "last_updated": product_data.get("last_updated"),
+            
+            # Info simplificada
+            "url_info": {
+                "type": "clean",
+                "message": "Add your own affiliate tag to earn commissions",
+                "tier": api_key.tier
+            }
         }
         
     except Exception as e:

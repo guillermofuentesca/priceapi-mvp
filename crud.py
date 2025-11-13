@@ -336,12 +336,13 @@ async def create_api_key(
     - enterprise: unlimited
     """
     # Límites por tier
+    # Límites actualizados según estrategia v2.1
     tier_limits = {
-        "free": 1000,
-        "starter": 10000,
-        "pro": 100000,
-        "business": 500000,
-        "enterprise": 999999999  # "unlimited"
+        "free": 500,              # Reducido de 1000
+        "starter": 10000,         # Igual
+        "professional": 50000,     # NUEVO tier
+        "business": 250000,       # Ajustado de 500k
+        "enterprise": 999999999   # Unlimited
     }
     
     # Generar key única
@@ -427,12 +428,7 @@ async def log_api_usage(
 
 
 async def check_rate_limit(db: AsyncSession, api_key: APIKey) -> tuple[bool, int]:
-    """
-    Verifica si una API key ha excedido su límite
-    
-    Returns:
-        (permitido, requests_restantes)
-    """
+    """Verifica si una API key ha excedido su límite"""
     remaining = api_key.requests_per_month - api_key.requests_used
     
     if api_key.requests_used >= api_key.requests_per_month:
