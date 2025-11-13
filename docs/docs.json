@@ -1,9 +1,10 @@
 {
-  "$schema": "https://mintlify.com/schema.json",
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
   "name": "HYBRID90 Price API",
   "logo": {
-    "dark": "/logo/dark.svg",
-    "light": "/logo/light.svg"
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
   },
   "favicon": "/favicon.svg",
   "colors": {
@@ -11,15 +12,18 @@
     "light": "#07C983",
     "dark": "#0D9373"
   },
-  "topbarLinks": [
-    {
-      "name": "Support",
-      "url": "mailto:support@hybrid90.com"
+  "navbar": {
+    "links": [
+      {
+        "label": "Support",
+        "href": "mailto:support@hybrid90.com"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Dashboard",
+      "href": "https://priceapi-mvp.onrender.com"
     }
-  ],
-  "topbarCtaButton": {
-    "name": "Dashboard",
-    "url": "https://priceapi-mvp.onrender.com"
   },
   "navigation": {
     "tabs": [
@@ -28,7 +32,11 @@
         "groups": [
           {
             "group": "Get Started",
-            "pages": ["introduction", "quickstart", "authentication"]
+            "pages": [
+              "introduction",
+              "quickstart",
+              "authentication"
+            ]
           }
         ]
       },
@@ -46,8 +54,10 @@
       }
     ]
   },
-  "footerSocials": {
-    "twitter": "https://twitter.com/hybrid90api",
-    "github": "https://github.com/guillermofuentesca/priceapi-mvp"
+  "footer": {
+    "socials": {
+      "x": "https://twitter.com/hybrid90api",
+      "github": "https://github.com/guillermofuentesca/priceapi-mvp"
+    }
   }
 }
