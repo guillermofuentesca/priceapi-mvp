@@ -1,7 +1,6 @@
 {
   "$schema": "https://mintlify.com/schema.json",
   "name": "HYBRID90 Price API",
-  "theme": "mint",
   "logo": {
     "dark": "/logo/dark.svg",
     "light": "/logo/light.svg"
@@ -22,25 +21,31 @@
     "name": "Dashboard",
     "url": "https://priceapi-mvp.onrender.com"
   },
-  "tabs": [
-    {
-      "name": "API Reference",
-      "url": "api-reference"
-    }
-  ],
-  "navigation": [
-    {
-      "group": "Get Started",
-      "pages": ["introduction", "quickstart", "authentication"]
-    },
-    {
-      "group": "API Documentation",
-      "pages": [
-        "api-reference/introduction",
-        "api-reference/endpoint/get-price"
-      ]
-    }
-  ],
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Guides",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": ["introduction", "quickstart", "authentication"]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "API Documentation",
+            "pages": [
+              "api-reference/introduction",
+              "api-reference/endpoint/get-price"
+            ]
+          }
+        ]
+      }
+    ]
+  },
   "footerSocials": {
     "twitter": "https://twitter.com/hybrid90api",
     "github": "https://github.com/guillermofuentesca/priceapi-mvp"
