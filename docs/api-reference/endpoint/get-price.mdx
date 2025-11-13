@@ -1,0 +1,81 @@
+---
+title: 'Get Price'
+api: 'GET /price'
+description: 'Get current price for an Amazon product'
+---
+
+## Query Parameters
+
+<ParamField query="asin" type="string" required>
+  Amazon Standard Identification Number
+</ParamField>
+
+<ParamField query="country" type="string" default="US">
+  Country code (US, UK, CA, MX, etc)
+</ParamField>
+
+<ParamField query="force_refresh" type="boolean" default="false">
+  Force fresh data (bypass cache)
+</ParamField>
+
+## Response
+
+<ResponseField name="asin" type="string">
+  Product ASIN
+</ResponseField>
+
+<ResponseField name="price" type="number">
+  Current price
+</ResponseField>
+
+<ResponseField name="currency" type="string">
+  Currency code
+</ResponseField>
+
+<ResponseField name="url" type="string">
+  Clean product URL (add your affiliate tag)
+</ResponseField>
+
+<ResponseField name="in_stock" type="boolean">
+  Stock availability
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -G https://priceapi-mvp.onrender.com/price \
+  -H "X-API-Key: YOUR_KEY" \
+  -d asin=B09V3KXJPB \
+  -d country=US
+```
+```python Python
+import requests
+
+response = requests.get(
+    'https://priceapi-mvp.onrender.com/price',
+    headers={'X-API-Key': 'YOUR_KEY'},
+    params={'asin': 'B09V3KXJPB', 'country': 'US'}
+)
+print(response.json())
+```
+
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "asin": "B09V3KXJPB",
+  "price": 1199.00,
+  "currency": "USD",
+  "url": "https://amazon.com/dp/B09V3KXJPB",
+  "original_price": 1438.80,
+  "discount": 16.67,
+  "in_stock": true,
+  "rating": 4.5,
+  "url_info": {
+    "type": "clean",
+    "message": "Add your own affiliate tag to earn commissions"
+  }
+}
+```
+
+</ResponseExample>

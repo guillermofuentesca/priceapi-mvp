@@ -1,0 +1,114 @@
+---
+title: 'Quickstart'
+description: 'Start tracking Amazon prices in under 5 minutes'
+---
+
+## Get your API key
+
+<Steps>
+  <Step title="Create an account">
+    Go to [priceapi-mvp.onrender.com](https://priceapi-mvp.onrender.com/docs) and register:
+```bash
+    POST /auth/register
+    {
+      "email": "you@example.com",
+      "password": "yourpassword",
+      "full_name": "Your Name"
+    }
+```
+  </Step>
+  
+  <Step title="Login">
+    Get your access token:
+```bash
+    POST /auth/login
+    {
+      "username": "you@example.com",
+      "password": "yourpassword"
+    }
+```
+    
+    Copy the `access_token` from response.
+  </Step>
+  
+  <Step title="Create API key">
+```bash
+    POST /api-keys
+    Authorization: Bearer YOUR_ACCESS_TOKEN
+    {
+      "name": "My First Key",
+      "tier": "free"
+    }
+```
+    
+    Copy your `key` (starts with `hybrid90_...`)
+  </Step>
+</Steps>
+
+## Make your first request
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://priceapi-mvp.onrender.com/price?asin=B09V3KXJPB" \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+```python Python
+import requests
+
+url = "https://priceapi-mvp.onrender.com/price"
+headers = {"X-API-Key": "YOUR_API_KEY"}
+params = {"asin": "B09V3KXJPB"}
+
+response = requests.get(url, headers=headers, params=params)
+print(response.json())
+```
+```javascript JavaScript
+const response = await fetch(
+  'https://priceapi-mvp.onrender.com/price?asin=B09V3KXJPB',
+  {
+    headers: {
+      'X-API-Key': 'YOUR_API_KEY'
+    }
+  }
+);
+
+const data = await response.json();
+console.log(data);
+```
+
+</CodeGroup>
+
+## Response
+```json
+{
+  "asin": "B09V3KXJPB",
+  "price": 1199.00,
+  "currency": "USD",
+  "url": "https://amazon.com/dp/B09V3KXJPB",
+  "in_stock": true,
+  "rating": 4.5,
+  "url_info": {
+    "type": "clean",
+    "message": "Add your own affiliate tag to earn commissions"
+  }
+}
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Explore all endpoints"
+    icon="list"
+    href="/api-reference"
+  >
+    See what else you can do
+  </Card>
+  <Card
+    title="Build your first app"
+    icon="rocket"
+    href="/guides/first-app"
+  >
+    15-minute tutorial
+  </Card>
+</CardGroup>

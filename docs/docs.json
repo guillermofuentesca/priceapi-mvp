@@ -1,0 +1,70 @@
+{
+  "name": "HYBRID90 Price API",
+  "logo": {
+    "dark": "/logo/dark.svg",
+    "light": "/logo/light.svg"
+  },
+  "favicon": "/favicon.png",
+  "colors": {
+    "primary": "#0D9373",
+    "light": "#07C983",
+    "dark": "#0D9373",
+    "anchors": {
+      "from": "#0D9373",
+      "to": "#07C983"
+    }
+  },
+  "topbarLinks": [
+    {
+      "name": "Support",
+      "url": "mailto:support@hybrid90.com"
+    }
+  ],
+  "topbarCtaButton": {
+    "name": "Dashboard",
+    "url": "https://priceapi-mvp.onrender.com"
+  },
+  "tabs": [
+    {
+      "name": "API Reference",
+      "url": "api-reference"
+    }
+  ],
+  "navigation": [
+    {
+      "group": "Get Started",
+      "pages": [
+        "introduction",
+        "quickstart",
+        "authentication"
+      ]
+    },
+    {
+      "group": "API Documentation",
+      "pages": [
+        "api-reference/introduction",
+        "api-reference/endpoint/get-price",
+        "api-reference/endpoint/get-history",
+        "api-reference/endpoint/track-product"
+      ]
+    },
+    {
+      "group": "Guides",
+      "pages": [
+        "guides/first-app",
+        "guides/rate-limits",
+        "guides/best-practices"
+      ]
+    }
+  ],
+  "footerSocials": {
+    "twitter": "https://twitter.com/hybrid90api",
+    "github": "https://github.com/youruser/priceapi-mvp"
+  },
+  "api": {
+    "baseUrl": "https://priceapi-mvp.onrender.com",
+    "playground": {
+      "mode": "simple"
+    }
+  }
+}

@@ -1,0 +1,57 @@
+---
+title: 'Authentication'
+description: 'How to authenticate with the HYBRID90 Price API'
+---
+
+## API Key Authentication
+
+All API requests require an API key passed in the `X-API-Key` header.
+```bash
+X-API-Key: hybrid90_YOUR_KEY_HERE
+```
+
+## Getting your API key
+
+1. Register an account at `/auth/register`
+2. Login to get access token at `/auth/login`
+3. Create API key at `/api-keys`
+
+<Warning>
+  Never share your API key or commit it to version control. Use environment variables.
+</Warning>
+
+## Example
+
+<CodeGroup>
+```bash cURL
+curl https://priceapi-mvp.onrender.com/price?asin=B09V3KXJPB \
+  -H "X-API-Key: hybrid90_abc123..."
+```
+```python Python
+import os
+import requests
+
+API_KEY = os.getenv('HYBRID90_API_KEY')
+
+headers = {'X-API-Key': API_KEY}
+response = requests.get('https://priceapi-mvp.onrender.com/price', 
+                       headers=headers,
+                       params={'asin': 'B09V3KXJPB'})
+```
+
+</CodeGroup>
+
+## Rate Limits
+
+Rate limits vary by tier:
+
+| Tier | Requests/Month | Rate Limit |
+|------|---------------|------------|
+| Free | 500 | 5/min |
+| Starter | 10,000 | 30/min |
+| Professional | 50,000 | 100/min |
+| Business | 250,000 | 500/min |
+
+<Tip>
+  Upgrade your tier at any time to increase limits
+</Tip>
