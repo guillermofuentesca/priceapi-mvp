@@ -1,4 +1,6 @@
 {
+  "$schema": "https://mintlify.com/schema.json",
+  "theme": "mint",
   "name": "HYBRID90 Price API",
   "logo": {
     "dark": "/logo/dark.svg",
@@ -49,7 +51,7 @@
   ],
   "footerSocials": {
     "twitter": "https://twitter.com/hybrid90api",
-    "github": "https://github.com/youruser/priceapi-mvp"
+    "github": "https://github.com/guillermofuentesca/priceapi-mvp"
   },
   "api": {
     "baseUrl": "https://priceapi-mvp.onrender.com",
